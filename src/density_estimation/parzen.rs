@@ -1,5 +1,5 @@
 use crate::density_estimation::{BuildDensityEstimator, DensityEstimator};
-use crate::ParamRange;
+use crate::Range;
 use ordered_float::OrderedFloat;
 use rand::distributions::Distribution;
 use rand::seq::SliceRandom;
@@ -10,7 +10,7 @@ use statrs::distribution::{Continuous, Univariate};
 pub struct ParzenEstimatorBuilder {}
 
 impl ParzenEstimatorBuilder {
-    fn setup_stddev(&self, xs: &mut [Entry], range: ParamRange) {
+    fn setup_stddev(&self, xs: &mut [Entry], range: Range) {
         let n = xs.len();
         for i in 0..n {
             let prev = if i == 0 {
@@ -38,8 +38,13 @@ impl ParzenEstimatorBuilder {
 
 impl BuildDensityEstimator for ParzenEstimatorBuilder {
     type Estimator = ParzenEstimator;
+    type Error = std::convert::Infallible;
 
-    fn build_density_estimator<I>(&self, xs: I, range: ParamRange) -> Self::Estimator
+    fn build_density_estimator<I>(
+        &self,
+        xs: I,
+        range: Range,
+    ) -> Result<Self::Estimator, Self::Error>
     where
         I: Iterator<Item = f64> + Clone,
     {
@@ -61,11 +66,11 @@ impl BuildDensityEstimator for ParzenEstimatorBuilder {
             .sum::<f64>()
             / xs.len() as f64;
 
-        ParzenEstimator {
+        Ok(ParzenEstimator {
             samples: xs,
             range,
             p_accept,
-        }
+        })
     }
 }
 
@@ -93,7 +98,7 @@ impl Entry {
 #[derive(Debug)]
 pub struct ParzenEstimator {
     samples: Vec<Entry>,
-    range: ParamRange,
+    range: Range,
     p_accept: f64,
 }
 

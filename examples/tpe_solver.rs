@@ -23,7 +23,7 @@ impl Solver {
             .map(|p| {
                 tpe::TpeOptimizer::new(
                     tpe::ParzenEstimatorBuilder::default(),
-                    tpe::ParamRange::new(p.range().low(), p.range().high()).expect("unreachable"),
+                    tpe::Range::new(p.range().low(), p.range().high()).expect("unreachable"),
                 )
             })
             .collect();

@@ -4,7 +4,11 @@ use rand::distributions::Distribution;
 use rand::Rng;
 use std::num::NonZeroUsize;
 
+pub use crate::range::{Range, RangeError};
+
 pub mod density_estimation;
+
+mod range;
 
 #[derive(Debug)]
 pub struct TpeOptions {
@@ -21,51 +25,9 @@ impl Default for TpeOptions {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct ParamRange {
-    start: f64,
-    end: f64,
-}
-
-impl std::fmt::Display for ParamRange {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}..{}", self.start, self.end)
-    }
-}
-
-impl ParamRange {
-    pub fn new(start: f64, end: f64) -> Result<Self, ParamRangeError> {
-        if !(end - start).is_finite() {
-            return Err(ParamRangeError::NonFiniteRange);
-        }
-
-        if !(start < end) {
-            return Err(ParamRangeError::EmptyRange);
-        }
-
-        Ok(Self { start, end })
-    }
-
-    pub fn start(self) -> f64 {
-        self.start
-    }
-
-    pub fn end(self) -> f64 {
-        self.end
-    }
-
-    pub fn width(self) -> f64 {
-        self.end - self.start
-    }
-
-    pub fn contains(self, v: f64) -> bool {
-        self.start <= v && v < self.end
-    }
-}
-
 #[derive(Debug)]
 pub struct TpeOptimizer<T = ParzenEstimatorBuilder> {
-    range: ParamRange,
+    range: Range,
     trials: Vec<Trial>,
     is_sorted: bool,
     builder: T,
@@ -73,7 +35,7 @@ pub struct TpeOptimizer<T = ParzenEstimatorBuilder> {
 }
 
 impl<T: BuildDensityEstimator> TpeOptimizer<T> {
-    pub fn new(builder: T, range: ParamRange) -> Self {
+    pub fn new(builder: T, range: Range) -> Self {
         Self {
             range,
             trials: Vec::new(),
@@ -83,7 +45,7 @@ impl<T: BuildDensityEstimator> TpeOptimizer<T> {
         }
     }
 
-    pub fn ask<R: Rng + ?Sized>(&mut self, rng: &mut R) -> f64 {
+    pub fn ask<R: Rng + ?Sized>(&mut self, rng: &mut R) -> Result<f64, T::Error> {
         if !self.is_sorted {
             self.trials.sort_by_key(|t| OrderedFloat(t.value));
             self.is_sorted = true;
@@ -95,11 +57,11 @@ impl<T: BuildDensityEstimator> TpeOptimizer<T> {
         let superior_estimator = self.builder.build_density_estimator(
             superiors.iter().map(|t| t.param).filter(|p| p.is_finite()),
             self.range,
-        );
+        )?;
         let inferior_estimator = self.builder.build_density_estimator(
             inferiors.iter().map(|t| t.param).filter(|p| p.is_finite()),
             self.range,
-        );
+        )?;
 
         let param = (&superior_estimator)
             .sample_iter(rng)
@@ -113,7 +75,7 @@ impl<T: BuildDensityEstimator> TpeOptimizer<T> {
             .max_by_key(|(ei, _)| OrderedFloat(*ei))
             .map(|(_, param)| param)
             .expect("unreachable");
-        param
+        Ok(param)
     }
 
     fn decide_split_point(&self) -> usize {
@@ -140,25 +102,16 @@ impl<T: BuildDensityEstimator> TpeOptimizer<T> {
 }
 
 #[derive(Debug, Clone)]
-pub struct Trial {
-    pub param: f64,
-    pub value: f64,
+struct Trial {
+    param: f64,
+    value: f64,
 }
 
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum TellError {
     #[error("the parameter value {param} is out of the range {range}")]
-    ParamOutOfRange { param: f64, range: ParamRange },
+    ParamOutOfRange { param: f64, range: Range },
 
     #[error("NaN value is not allowed")]
     NanValue,
-}
-
-#[derive(Debug, Clone, thiserror::Error)]
-pub enum ParamRangeError {
-    #[error("not a finite range")]
-    NonFiniteRange,
-
-    #[error("an empty range")]
-    EmptyRange,
 }
