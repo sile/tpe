@@ -10,6 +10,10 @@ pub mod density_estimation;
 
 mod range;
 
+// TODO: fn range()
+// TODO: fn parzen()
+// TODO: fn histogram()
+
 #[derive(Debug)]
 pub struct TpeOptions {
     gamma: f64,
@@ -27,7 +31,7 @@ impl Default for TpeOptions {
 
 #[derive(Debug)]
 pub struct TpeOptimizer<T = ParzenEstimatorBuilder> {
-    range: Range,
+    range: Range, // TODO: param_range
     trials: Vec<Trial>,
     is_sorted: bool,
     builder: T,

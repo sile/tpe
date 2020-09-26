@@ -1,8 +1,10 @@
 use crate::Range;
 use rand::distributions::Distribution;
 
+pub use self::histogram::{HistogramEstimator, HistogramEstimatorBuilder};
 pub use self::parzen::{ParzenEstimator, ParzenEstimatorBuilder};
 
+mod histogram;
 mod parzen;
 
 pub trait DensityEstimator: Distribution<f64> {
