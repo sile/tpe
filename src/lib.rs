@@ -2,7 +2,37 @@
 //!
 //! # Examples
 //!
-//! TODO
+//! An example optimizing a simple quadratic function which has one numerical and one categorical parameters.
+//! ```
+//! use rand::SeedableRng as _;
+//!
+//! # fn main() -> anyhow::Result<()> {
+//! let choices = [1, 10, 100];
+//! let mut optim0 =
+//!     tpe::TpeOptimizer::new(tpe::parzen_estimator(), tpe::range(-5.0, 5.0)?);
+//! let mut optim1 =
+//!     tpe::TpeOptimizer::new(tpe::histogram_estimator(), tpe::categorical_range(choices.len())?);
+//!
+//! fn objective(x: f64, y: i32) -> f64 {
+//!     x.powi(2) + y as f64
+//! }
+//!
+//! let mut best_value = std::f64::INFINITY;
+//! let mut rng = rand::rngs::StdRng::from_seed(Default::default());
+//! for _ in 0..100 {
+//!    let x = optim0.ask(&mut rng)?;
+//!    let y = optim1.ask(&mut rng)?;
+//!
+//!    let v = objective(x, choices[y as usize]);
+//!    optim0.tell(x, v)?;
+//!    optim1.tell(y, v)?;
+//!    best_value = best_value.min(v);
+//! }
+//!
+//! assert_eq!(best_value, 1.000098470725203);
+//! # Ok(())
+//! # }
+//! ```
 //!
 //! # References
 //!
@@ -24,6 +54,13 @@ pub mod range;
 /// Creates a `Range` instance.
 pub fn range(start: f64, end: f64) -> Result<Range, RangeError> {
     Range::new(start, end)
+}
+
+/// Creates a `Range` for a categorical parameter.
+///
+/// This is equivalent to `range(0.0, cardinality as f64)`.
+pub fn categorical_range(cardinality: usize) -> Result<Range, RangeError> {
+    Range::new(0.0, cardinality as f64)
 }
 
 /// Creates a `DefaultEstimatorBuilder` to build `ParzenEstimator` (for categorical parameter).
@@ -224,4 +261,37 @@ pub enum TellError {
     #[error("NaN value is not allowed")]
     /// NaN value is not allowed.
     NanValue,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::SeedableRng;
+
+    #[test]
+    fn optimizer_works() -> anyhow::Result<()> {
+        let choices = [1, 10, 100];
+        let mut optim0 = TpeOptimizer::new(parzen_estimator(), range(-5.0, 5.0)?);
+        let mut optim1 =
+            TpeOptimizer::new(histogram_estimator(), categorical_range(choices.len())?);
+
+        fn objective(x: f64, y: i32) -> f64 {
+            x.powi(2) + y as f64
+        }
+
+        let mut best_value = std::f64::INFINITY;
+        let mut rng = rand::rngs::StdRng::from_seed(Default::default());
+        for _ in 0..100 {
+            let x = optim0.ask(&mut rng)?;
+            let y = optim1.ask(&mut rng)?;
+
+            let v = objective(x, choices[y as usize]);
+            optim0.tell(x, v)?;
+            optim1.tell(y, v)?;
+            best_value = best_value.min(v);
+        }
+        assert_eq!(best_value, 1.000098470725203);
+
+        Ok(())
+    }
 }
