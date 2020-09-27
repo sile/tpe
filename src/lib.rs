@@ -115,16 +115,13 @@ impl TpeOptimizerBuilder {
             return Err(BuildError::GammaOutOfRange);
         }
 
-        let candidates =
-            NonZeroUsize::new(self.candidates).ok_or_else(|| BuildError::ZeroCandidates)?;
-
         Ok(TpeOptimizer {
             param_range,
             estimator_builder,
             trials: Vec::new(),
             is_sorted: false,
             gamma: self.gamma,
-            candidates,
+            candidates: NonZeroUsize::new(self.candidates).ok_or(BuildError::ZeroCandidates)?,
         })
     }
 }
