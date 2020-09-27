@@ -3,8 +3,16 @@ use crate::Range;
 use rand::distributions::{Distribution, WeightedIndex};
 use rand::Rng;
 
+/// Builder of `HistogramEstimator`.
 #[derive(Debug, Default)]
 pub struct HistogramEstimatorBuilder {}
+
+impl HistogramEstimatorBuilder {
+    /// Makes a new `HistogramEstimatorBuilder` instance.
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
 
 impl BuildDensityEstimator for HistogramEstimatorBuilder {
     type Estimator = HistogramEstimator;
@@ -12,19 +20,19 @@ impl BuildDensityEstimator for HistogramEstimatorBuilder {
 
     fn build_density_estimator<I>(
         &self,
-        params: I,
-        param_range: Range,
+        xs: I,
+        range: Range,
     ) -> Result<Self::Estimator, Self::Error>
     where
         I: Iterator<Item = f64> + Clone,
     {
-        let cardinality = param_range.width().ceil() as usize;
-        let n = params.clone().count() + cardinality;
+        let cardinality = range.width().ceil() as usize;
+        let n = xs.clone().count() + cardinality;
 
         let weight = 1.0 / n as f64;
         let mut probabilities = vec![weight; cardinality];
-        for p in params {
-            probabilities[p.floor() as usize] += weight;
+        for x in xs {
+            probabilities[x.floor() as usize] += weight;
         }
 
         let distribution = WeightedIndex::new(probabilities.iter()).expect("unreachable");
@@ -35,6 +43,12 @@ impl BuildDensityEstimator for HistogramEstimatorBuilder {
     }
 }
 
+/// Histogram based density estimation.
+///
+/// This can be used for categorical parameters.
+///
+/// Note that this estimator assumes that each told value is the index, not the raw value,
+/// of a categorical parameter.
 #[derive(Debug)]
 pub struct HistogramEstimator {
     probabilities: Vec<f64>,

@@ -1,3 +1,16 @@
+//! This crate provides a hyperparameter optimization algorithm using TPE (Tree-structured Parzen Estimator).
+//!
+//! # Examples
+//!
+//! TODO
+//!
+//! # References
+//!
+//! Please refer to the following papers about the details of TPE:
+//!
+//! - [Algorithms for Hyper-Parameter Optimization](https://papers.nips.cc/paper/4443-algorithms-for-hyper-parameter-optimization.pdf)
+//! - [Making a Science of Model Search: Hyperparameter Optimization in Hundreds of Dimensions for Vision Architectures](http://proceedings.mlr.press/v28/bergstra13.pdf)
+#![warn(missing_docs)]
 use crate::density_estimation::{BuildDensityEstimator, DefaultEstimatorBuilder, DensityEstimator};
 use crate::range::{Range, RangeError};
 use ordered_float::OrderedFloat;
@@ -8,53 +21,116 @@ use std::num::NonZeroUsize;
 pub mod density_estimation;
 pub mod range;
 
+/// Creates a `Range` instance.
 pub fn range(start: f64, end: f64) -> Result<Range, RangeError> {
     Range::new(start, end)
 }
 
-pub fn parzen_estimator() -> self::density_estimation::ParzenEstimatorBuilder {
-    Default::default()
+/// Creates a `DefaultEstimatorBuilder` to build `ParzenEstimator` (for categorical parameter).
+pub fn parzen_estimator() -> DefaultEstimatorBuilder {
+    DefaultEstimatorBuilder::Parzen(Default::default())
 }
 
-pub fn histogram_estimator() -> self::density_estimation::HistogramEstimatorBuilder {
-    Default::default()
+/// Creates a `DefaultEstimatorBuilder` to build `HistogramEstimator` (for numerical parameter).
+pub fn histogram_estimator() -> DefaultEstimatorBuilder {
+    DefaultEstimatorBuilder::Histogram(Default::default())
 }
 
+/// Builder of `TpeOptimizer`.
 #[derive(Debug)]
-pub struct TpeOptions {
+pub struct TpeOptimizerBuilder {
+    gamma: f64,
+    candidates: usize,
+}
+
+impl TpeOptimizerBuilder {
+    /// Makes a new `TpeOptimizerBuilder` instance with the default settings.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the percentage at which the good and bad observations are split.
+    ///
+    /// The default values is `0.1`.
+    pub fn gamma(&mut self, gamma: f64) -> &mut Self {
+        self.gamma = gamma;
+        self
+    }
+
+    /// Sets the number of candidates to be sampled to decide the next parameter.
+    ///
+    /// The default value is `24`.
+    pub fn candidates(&mut self, candidates: usize) -> &mut Self {
+        self.candidates = candidates;
+        self
+    }
+
+    /// Builds a `TpeOptimizer` with the given settings.
+    pub fn build<T>(
+        &self,
+        estimator_builder: T,
+        param_range: Range,
+    ) -> Result<TpeOptimizer<T>, BuildError>
+    where
+        T: BuildDensityEstimator,
+    {
+        if !(0.0 <= self.gamma && self.gamma <= 1.0) {
+            return Err(BuildError::GammaOutOfRange);
+        }
+
+        let candidates =
+            NonZeroUsize::new(self.candidates).ok_or_else(|| BuildError::ZeroCandidates)?;
+
+        Ok(TpeOptimizer {
+            param_range,
+            estimator_builder,
+            trials: Vec::new(),
+            is_sorted: false,
+            gamma: self.gamma,
+            candidates,
+        })
+    }
+}
+
+impl Default for TpeOptimizerBuilder {
+    fn default() -> Self {
+        Self {
+            gamma: 0.1,
+            candidates: 24,
+        }
+    }
+}
+
+/// Optimizer using TPE.
+///
+/// Note that an instance of TpeOptimizer can handle only one hyperparameter.
+/// So if you want to optimize multiple hyperparameters simultaneously,
+/// please create an optimizer for each hyperparameter.
+#[derive(Debug)]
+pub struct TpeOptimizer<T = DefaultEstimatorBuilder> {
+    param_range: Range,
+    estimator_builder: T,
+    trials: Vec<Trial>,
+    is_sorted: bool,
     gamma: f64,
     candidates: NonZeroUsize,
 }
 
-impl Default for TpeOptions {
-    fn default() -> Self {
-        Self {
-            gamma: 0.1,
-            candidates: NonZeroUsize::new(24).expect("unreachable"),
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct TpeOptimizer<T = DefaultEstimatorBuilder> {
-    range: Range, // TODO: param_range
-    trials: Vec<Trial>,
-    is_sorted: bool,
-    builder: T,
-    options: TpeOptions,
-}
-
 impl<T: BuildDensityEstimator> TpeOptimizer<T> {
-    pub fn new(builder: T, range: Range) -> Self {
-        Self {
-            range,
-            trials: Vec::new(),
-            is_sorted: false,
-            builder,
-            options: TpeOptions::default(),
-        }
+    /// Makes a new `TpeOptimizer` with the default settings.
+    ///
+    /// If you want to customize the settings, please use `TpeOptimizerBuilder` instead.
+    pub fn new(estimator_builder: T, param_range: Range) -> Self {
+        TpeOptimizerBuilder::new()
+            .build(estimator_builder, param_range)
+            .expect("unreachable")
     }
 
+    /// Returns the next value of the optimization target parameter to be evaluated.
+    ///
+    /// Note that, before the first asking, it might be worth to give some evaluation
+    /// results of randomly sampled observations to `TpeOptimizer` (via the `tell` method)
+    /// to reduce bias due to too few samples.
     pub fn ask<R: Rng + ?Sized>(&mut self, rng: &mut R) -> Result<f64, T::Error> {
         if !self.is_sorted {
             self.trials.sort_by_key(|t| OrderedFloat(t.value));
@@ -64,18 +140,18 @@ impl<T: BuildDensityEstimator> TpeOptimizer<T> {
         let split_point = self.decide_split_point();
         let (superiors, inferiors) = self.trials.split_at(split_point);
 
-        let superior_estimator = self.builder.build_density_estimator(
+        let superior_estimator = self.estimator_builder.build_density_estimator(
             superiors.iter().map(|t| t.param).filter(|p| p.is_finite()),
-            self.range,
+            self.param_range,
         )?;
-        let inferior_estimator = self.builder.build_density_estimator(
+        let inferior_estimator = self.estimator_builder.build_density_estimator(
             inferiors.iter().map(|t| t.param).filter(|p| p.is_finite()),
-            self.range,
+            self.param_range,
         )?;
 
         let param = (&superior_estimator)
             .sample_iter(rng)
-            .take(self.options.candidates.get())
+            .take(self.candidates.get())
             .map(|candidate| {
                 let superior_log_likelihood = superior_estimator.log_pdf(candidate);
                 let inferior_log_likelihood = inferior_estimator.log_pdf(candidate);
@@ -88,19 +164,19 @@ impl<T: BuildDensityEstimator> TpeOptimizer<T> {
         Ok(param)
     }
 
-    fn decide_split_point(&self) -> usize {
-        (self.trials.len() as f64 * self.options.gamma).ceil() as usize
-    }
-
+    /// Tells the evaluation result of a hyperparameter value to the optimizer.
+    ///
+    /// Note that the `param` should be NaN if the hyperparameter was not used in the evaluation
+    /// (this could be happen when the entire search space is conditional).
     pub fn tell(&mut self, param: f64, value: f64) -> Result<(), TellError> {
         if value.is_nan() {
             return Err(TellError::NanValue);
         }
 
-        if !(param.is_nan() || self.range.contains(param)) {
+        if !(param.is_nan() || self.param_range.contains(param)) {
             return Err(TellError::ParamOutOfRange {
                 param,
-                range: self.range,
+                range: self.param_range,
             });
         }
 
@@ -108,6 +184,10 @@ impl<T: BuildDensityEstimator> TpeOptimizer<T> {
         self.is_sorted = false;
 
         Ok(())
+    }
+
+    fn decide_split_point(&self) -> usize {
+        (self.trials.len() as f64 * self.gamma).ceil() as usize
     }
 }
 
@@ -117,11 +197,31 @@ struct Trial {
     value: f64,
 }
 
+/// Possible errors during `TpeOptimizerBuilder::build`.
+#[derive(Debug, Clone, thiserror::Error)]
+pub enum BuildError {
+    #[error("the value of `gamma` must be in the range from 0.0 to 1.0")]
+    /// The value of `gamma` must be in the range from `0.0` to `1.0`.
+    GammaOutOfRange,
+
+    #[error("the value of `candidates` must be a positive integer")]
+    /// The value of `candidates` must be a positive integer.
+    ZeroCandidates,
+}
+
+/// Possible errors during `TpeOptimizer::tell`.
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum TellError {
     #[error("the parameter value {param} is out of the range {range}")]
-    ParamOutOfRange { param: f64, range: Range },
+    /// The parameter value is out of the range.
+    ParamOutOfRange {
+        /// Actual parameter value.
+        param: f64,
+        /// Expected parameter range.
+        range: Range,
+    },
 
     #[error("NaN value is not allowed")]
+    /// NaN value is not allowed.
     NanValue,
 }

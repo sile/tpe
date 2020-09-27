@@ -1,3 +1,4 @@
+//! Probability density function estimation.
 use crate::Range;
 use rand::distributions::Distribution;
 use rand::Rng;
@@ -8,24 +9,33 @@ pub use self::parzen::{ParzenEstimator, ParzenEstimatorBuilder};
 mod histogram;
 mod parzen;
 
+/// This trait allows estimating the probability density of a sample and sampling from the function.
 pub trait DensityEstimator: Distribution<f64> {
+    /// Estimates the log probability density of a sample.
     fn log_pdf(&self, x: f64) -> f64;
 }
 
+/// This trait allows building probability density estimators.
 pub trait BuildDensityEstimator {
+    /// Density estimator to be built.
     type Estimator: DensityEstimator;
+
+    /// Possible error during building.
     type Error: std::error::Error;
 
+    /// Builds a probability density estimator from the given samples.
     fn build_density_estimator<I>(
         &self,
-        params: I,
+        xs: I,
         range: Range,
     ) -> Result<Self::Estimator, Self::Error>
     where
         I: Iterator<Item = f64> + Clone;
 }
 
+/// Default estimator.
 #[derive(Debug)]
+#[allow(missing_docs)]
 pub enum DefaultEstimator {
     Parzen(ParzenEstimator),
     Histogram(HistogramEstimator),
@@ -49,7 +59,9 @@ impl Distribution<f64> for DefaultEstimator {
     }
 }
 
+/// Builder of `DefaultEstimator`.
 #[derive(Debug)]
+#[allow(missing_docs)]
 pub enum DefaultEstimatorBuilder {
     Parzen(ParzenEstimatorBuilder),
     Histogram(HistogramEstimatorBuilder),

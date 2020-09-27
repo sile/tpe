@@ -6,10 +6,16 @@ use rand::seq::SliceRandom;
 use rand::Rng;
 use statrs::distribution::{Continuous, Univariate};
 
+/// Builder of `ParzenEstimator`.
 #[derive(Debug, Default)]
 pub struct ParzenEstimatorBuilder {}
 
 impl ParzenEstimatorBuilder {
+    /// Makes a new `ParzenEstimatorBuilder` instance.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     fn setup_stddev(&self, xs: &mut [Entry], range: Range) {
         let n = xs.len();
         for i in 0..n {
@@ -95,6 +101,9 @@ impl Entry {
     }
 }
 
+/// Parzen window based density estimator.
+///
+/// This can be used for numerical parameters.
 #[derive(Debug)]
 pub struct ParzenEstimator {
     samples: Vec<Entry>,
