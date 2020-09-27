@@ -16,7 +16,7 @@ impl ParzenEstimatorBuilder {
         Self::default()
     }
 
-    fn setup_stddev(&self, xs: &mut [Entry], range: Range) {
+    fn setup_stddev(&self, xs: &mut [Normal], range: Range) {
         let n = xs.len();
         for i in 0..n {
             let prev = if i == 0 {
@@ -57,7 +57,7 @@ impl BuildDensityEstimator for ParzenEstimatorBuilder {
         let prior = (range.start() + range.end()) * 0.5;
         let mut xs = xs
             .chain(std::iter::once(prior))
-            .map(|x| Entry {
+            .map(|x| Normal {
                 mean: x,
                 stddev: std::f64::NAN,
             })
@@ -80,14 +80,14 @@ impl BuildDensityEstimator for ParzenEstimatorBuilder {
     }
 }
 
-// TODO: Normal
+/// Normal distribution.
 #[derive(Debug)]
-struct Entry {
+struct Normal {
     mean: f64,
     stddev: f64,
 }
 
-impl Entry {
+impl Normal {
     fn log_pdf(&self, x: f64) -> f64 {
         statrs::distribution::Normal::new(self.mean, self.stddev)
             .expect("unreachable")
@@ -106,7 +106,7 @@ impl Entry {
 /// This can be used for numerical parameters.
 #[derive(Debug)]
 pub struct ParzenEstimator {
-    samples: Vec<Entry>,
+    samples: Vec<Normal>,
     range: Range,
     p_accept: f64,
 }
