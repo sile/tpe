@@ -1,18 +1,24 @@
 use crate::density_estimation::{BuildDensityEstimator, DefaultEstimatorBuilder, DensityEstimator};
+use crate::range::{Range, RangeError};
 use ordered_float::OrderedFloat;
 use rand::distributions::Distribution;
 use rand::Rng;
 use std::num::NonZeroUsize;
 
-pub use crate::range::{Range, RangeError};
-
 pub mod density_estimation;
+pub mod range;
 
-mod range;
+pub fn range(start: f64, end: f64) -> Result<Range, RangeError> {
+    Range::new(start, end)
+}
 
-// TODO: fn range()
-// TODO: fn parzen()
-// TODO: fn histogram()
+pub fn parzen_estimator() -> self::density_estimation::ParzenEstimatorBuilder {
+    Default::default()
+}
+
+pub fn histogram_estimator() -> self::density_estimation::HistogramEstimatorBuilder {
+    Default::default()
+}
 
 #[derive(Debug)]
 pub struct TpeOptions {

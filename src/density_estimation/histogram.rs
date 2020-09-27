@@ -3,7 +3,7 @@ use crate::Range;
 use rand::distributions::{Distribution, WeightedIndex};
 use rand::Rng;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct HistogramEstimatorBuilder {}
 
 impl BuildDensityEstimator for HistogramEstimatorBuilder {
