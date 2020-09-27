@@ -140,6 +140,8 @@ impl Default for TpeOptimizerBuilder {
 
 /// Optimizer using TPE.
 ///
+/// This try to search out the parameter value which could minimize the evaluation result.
+///
 /// Note that an instance of TpeOptimizer can handle only one hyperparameter.
 /// So if you want to optimize multiple hyperparameters simultaneously,
 /// please create an optimizer for each hyperparameter.
