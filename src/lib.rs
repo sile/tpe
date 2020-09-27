@@ -1,4 +1,4 @@
-use crate::density_estimation::{BuildDensityEstimator, DensityEstimator, ParzenEstimatorBuilder};
+use crate::density_estimation::{BuildDensityEstimator, DefaultEstimatorBuilder, DensityEstimator};
 use ordered_float::OrderedFloat;
 use rand::distributions::Distribution;
 use rand::Rng;
@@ -30,7 +30,7 @@ impl Default for TpeOptions {
 }
 
 #[derive(Debug)]
-pub struct TpeOptimizer<T = ParzenEstimatorBuilder> {
+pub struct TpeOptimizer<T = DefaultEstimatorBuilder> {
     range: Range, // TODO: param_range
     trials: Vec<Trial>,
     is_sorted: bool,
