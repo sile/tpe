@@ -20,7 +20,7 @@ impl Range {
             return Err(RangeError::NonFiniteRange);
         }
 
-        if !(start < end) {
+        if start.partial_cmp(&end) != Some(std::cmp::Ordering::Less) {
             return Err(RangeError::EmptyRange);
         }
 
