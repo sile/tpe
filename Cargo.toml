@@ -15,8 +15,8 @@ coveralls = {repository = "sile/tpe"}
 
 [dependencies]
 ordered-float = "2"
-rand = "0.7"
-rand_distr = "0.3"
+rand = "0.8"
+rand_distr = "0.4"
 statrs = "0.13"
 thiserror = "1"
 
