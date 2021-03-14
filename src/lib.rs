@@ -222,6 +222,67 @@ impl<T: BuildDensityEstimator> TpeOptimizer<T> {
         Ok(())
     }
 
+    /// Retruns all told parameter and objective values.
+    ///
+    /// Note that the order of items in the returned iterator doesn't reflect the order [`TpeOptimizer::tell`] called.
+    ///
+    /// # Examples
+    ///
+    /// You can this method to store and load the state of a [`TpeOptimizer`].
+    ///
+    /// ```
+    /// # fn main() -> anyhow::Result<()> {
+    /// let temp_file = tempfile::NamedTempFile::new()?;
+    /// let mut rng = rand::thread_rng();
+    ///
+    /// fn objective(x: f64) -> f64 {
+    ///     x.powi(2)
+    /// }
+    ///
+    /// {
+    ///     let mut optim =
+    ///         tpe::TpeOptimizer::new(tpe::parzen_estimator(), tpe::range(-5.0, 5.0)?);
+    ///
+    ///     // Runs 100 trials.
+    ///     for _ in 0..100 {
+    ///         let x = optim.ask(&mut rng)?;
+    ///         let v = objective(x);
+    ///         optim.tell(x, v)?;
+    ///     }
+    ///
+    ///     // Stores the trials.
+    ///     let mut file = std::fs::OpenOptions::new()
+    ///         .write(true)
+    ///         .open(temp_file.path())?;
+    ///     serde_json::to_writer(&mut file, &optim.trials().collect::<Vec<_>>())?;
+    /// }
+    ///
+    /// {
+    ///     let mut optim =
+    ///         tpe::TpeOptimizer::new(tpe::parzen_estimator(), tpe::range(-5.0, 5.0)?);
+    ///
+    ///     // Loads the previous trials.
+    ///     let mut file = std::fs::File::open(temp_file.path())?;
+    ///     let trials: Vec<(f64, f64)> = serde_json::from_reader(&mut file)?;
+    ///     for (x, v) in trials {
+    ///         optim.tell(x, v)?;
+    ///     }
+    ///
+    ///     // Runs additional 100 trials.
+    ///     for _ in 0..100 {
+    ///         let x = optim.ask(&mut rng)?;
+    ///         let v = objective(x);
+    ///         optim.tell(x, v)?;
+    ///     }
+    ///     assert_eq!(optim.trials().count(), 200);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn trials(&self) -> impl '_ + Iterator<Item = (f64, f64)> {
+        self.trials.iter().map(|t| (t.param, t.value))
+    }
+
     fn decide_split_point(&self) -> usize {
         (self.trials.len() as f64 * self.gamma).ceil() as usize
     }
@@ -290,6 +351,54 @@ mod tests {
             best_value = best_value.min(v);
         }
         assert_eq!(best_value, 1.000054276671888);
+
+        Ok(())
+    }
+
+    #[test]
+    fn store_and_save_trials_worls() -> anyhow::Result<()> {
+        let temp_file = tempfile::NamedTempFile::new()?;
+        let mut rng = rand::thread_rng();
+
+        fn objective(x: f64) -> f64 {
+            x.powi(2)
+        }
+
+        {
+            let mut optim = TpeOptimizer::new(parzen_estimator(), range(-5.0, 5.0)?);
+
+            // Runs 100 trials.
+            for _ in 0..100 {
+                let x = optim.ask(&mut rng)?;
+                let v = objective(x);
+                optim.tell(x, v)?;
+            }
+
+            // Stores the trials.
+            let mut file = std::fs::OpenOptions::new()
+                .write(true)
+                .open(temp_file.path())?;
+            serde_json::to_writer(&mut file, &optim.trials().collect::<Vec<_>>())?;
+        }
+
+        {
+            let mut optim = TpeOptimizer::new(parzen_estimator(), range(-5.0, 5.0)?);
+
+            // Loads the previous trials.
+            let mut file = std::fs::File::open(temp_file.path())?;
+            let trials: Vec<(f64, f64)> = serde_json::from_reader(&mut file)?;
+            for (x, v) in trials {
+                optim.tell(x, v)?;
+            }
+
+            // Runs additional 100 trials.
+            for _ in 0..100 {
+                let x = optim.ask(&mut rng)?;
+                let v = objective(x);
+                optim.tell(x, v)?;
+            }
+            assert_eq!(optim.trials().count(), 200);
+        }
 
         Ok(())
     }
