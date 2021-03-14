@@ -14,7 +14,7 @@ impl std::fmt::Display for Range {
 }
 
 impl Range {
-    /// Makes a new `Range` instance.
+    /// Makes a new [`Range`] instance.
     pub fn new(start: f64, end: f64) -> Result<Self, RangeError> {
         if !(end - start).is_finite() {
             return Err(RangeError::NonFiniteRange);
@@ -48,7 +48,7 @@ impl Range {
     }
 }
 
-/// Possible errors during `Range` construction.
+/// Possible errors during [`Range`] construction.
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum RangeError {
     #[error("not a finite range")]

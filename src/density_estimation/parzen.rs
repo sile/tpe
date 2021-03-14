@@ -6,12 +6,12 @@ use rand::seq::SliceRandom;
 use rand::Rng;
 use statrs::distribution::{Continuous, Univariate};
 
-/// Builder of `ParzenEstimator`.
+/// Builder of [`ParzenEstimator`].
 #[derive(Debug, Default)]
 pub struct ParzenEstimatorBuilder {}
 
 impl ParzenEstimatorBuilder {
-    /// Makes a new `ParzenEstimatorBuilder` instance.
+    /// Makes a new [`ParzenEstimatorBuilder`] instance.
     pub fn new() -> Self {
         Self::default()
     }

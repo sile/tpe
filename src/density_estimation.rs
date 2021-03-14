@@ -59,7 +59,7 @@ impl Distribution<f64> for DefaultEstimator {
     }
 }
 
-/// Builder of `DefaultEstimator`.
+/// Builder of [`DefaultEstimator`].
 #[derive(Debug)]
 #[allow(missing_docs)]
 pub enum DefaultEstimatorBuilder {
