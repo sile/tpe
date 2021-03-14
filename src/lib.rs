@@ -42,6 +42,8 @@
 //! - [Making a Science of Model Search: Hyperparameter Optimization in Hundreds of Dimensions for Vision Architectures](http://proceedings.mlr.press/v28/bergstra13.pdf)
 #![warn(missing_docs)]
 use crate::density_estimation::{BuildDensityEstimator, DefaultEstimatorBuilder, DensityEstimator};
+#[cfg(doc)]
+use crate::density_estimation::{HistogramEstimator, ParzenEstimator};
 use crate::range::{Range, RangeError};
 use ordered_float::OrderedFloat;
 use rand::distributions::Distribution;
@@ -51,29 +53,29 @@ use std::num::NonZeroUsize;
 pub mod density_estimation;
 pub mod range;
 
-/// Creates a `Range` instance.
+/// Creates a [`Range`] instance.
 pub fn range(start: f64, end: f64) -> Result<Range, RangeError> {
     Range::new(start, end)
 }
 
-/// Creates a `Range` for a categorical parameter.
+/// Creates a [`Range`] for a categorical parameter.
 ///
 /// This is equivalent to `range(0.0, cardinality as f64)`.
 pub fn categorical_range(cardinality: usize) -> Result<Range, RangeError> {
     Range::new(0.0, cardinality as f64)
 }
 
-/// Creates a `DefaultEstimatorBuilder` to build `ParzenEstimator` (for categorical parameter).
+/// Creates a [`DefaultEstimatorBuilder`] to build [`ParzenEstimator`] (for categorical parameter).
 pub fn parzen_estimator() -> DefaultEstimatorBuilder {
     DefaultEstimatorBuilder::Parzen(Default::default())
 }
 
-/// Creates a `DefaultEstimatorBuilder` to build `HistogramEstimator` (for numerical parameter).
+/// Creates a [`DefaultEstimatorBuilder`] to build [`HistogramEstimator`] (for numerical parameter).
 pub fn histogram_estimator() -> DefaultEstimatorBuilder {
     DefaultEstimatorBuilder::Histogram(Default::default())
 }
 
-/// Builder of `TpeOptimizer`.
+/// Builder of [`TpeOptimizer`].
 #[derive(Debug)]
 pub struct TpeOptimizerBuilder {
     gamma: f64,
@@ -81,7 +83,7 @@ pub struct TpeOptimizerBuilder {
 }
 
 impl TpeOptimizerBuilder {
-    /// Makes a new `TpeOptimizerBuilder` instance with the default settings.
+    /// Makes a new [`TpeOptimizerBuilder`] instance with the default settings.
     pub fn new() -> Self {
         Self::default()
     }
@@ -102,7 +104,7 @@ impl TpeOptimizerBuilder {
         self
     }
 
-    /// Builds a `TpeOptimizer` with the given settings.
+    /// Builds a [`TpeOptimizer`] with the given settings.
     pub fn build<T>(
         &self,
         estimator_builder: T,
@@ -153,9 +155,9 @@ pub struct TpeOptimizer<T = DefaultEstimatorBuilder> {
 }
 
 impl<T: BuildDensityEstimator> TpeOptimizer<T> {
-    /// Makes a new `TpeOptimizer` with the default settings.
+    /// Makes a new [`TpeOptimizer`] with the default settings.
     ///
-    /// If you want to customize the settings, please use `TpeOptimizerBuilder` instead.
+    /// If you want to customize the settings, please use [`TpeOptimizerBuilder`] instead.
     pub fn new(estimator_builder: T, param_range: Range) -> Self {
         TpeOptimizerBuilder::new()
             .build(estimator_builder, param_range)
@@ -165,7 +167,7 @@ impl<T: BuildDensityEstimator> TpeOptimizer<T> {
     /// Returns the next value of the optimization target parameter to be evaluated.
     ///
     /// Note that, before the first asking, it might be worth to give some evaluation
-    /// results of randomly sampled observations to `TpeOptimizer` (via the `tell` method)
+    /// results of randomly sampled observations to [`TpeOptimizer`] (via the [`tell`](TpeOptimizer::tell) method)
     /// to reduce bias due to too few samples.
     pub fn ask<R: Rng + ?Sized>(&mut self, rng: &mut R) -> Result<f64, T::Error> {
         if !self.is_sorted {
@@ -294,7 +296,7 @@ struct Trial {
     value: f64,
 }
 
-/// Possible errors during `TpeOptimizerBuilder::build`.
+/// Possible errors during [`TpeOptimizerBuilder::build`].
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum BuildError {
     #[error("the value of `gamma` must be in the range from 0.0 to 1.0")]
@@ -306,7 +308,7 @@ pub enum BuildError {
     ZeroCandidates,
 }
 
-/// Possible errors during `TpeOptimizer::tell`.
+/// Possible errors during [`TpeOptimizer::tell`].
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum TellError {
     #[error("the parameter value {param} is out of the range {range}")]

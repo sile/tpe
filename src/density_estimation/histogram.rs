@@ -3,12 +3,12 @@ use crate::Range;
 use rand::distributions::{Distribution, WeightedIndex};
 use rand::Rng;
 
-/// Builder of `HistogramEstimator`.
+/// Builder of [`HistogramEstimator`].
 #[derive(Debug, Default)]
 pub struct HistogramEstimatorBuilder {}
 
 impl HistogramEstimatorBuilder {
-    /// Makes a new `HistogramEstimatorBuilder` instance.
+    /// Makes a new [`HistogramEstimatorBuilder`] instance.
     pub fn new() -> Self {
         Self::default()
     }
