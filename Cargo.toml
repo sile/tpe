@@ -1,6 +1,6 @@
 [package]
 name = "tpe"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Takeru Ohta <phjgt308@gmail.com>"]
 edition = "2021"
 description = "A library that implements TPE, a hyperparameter optimization algorithm"
