@@ -4,7 +4,7 @@ use ordered_float::OrderedFloat;
 use rand::distributions::Distribution;
 use rand::seq::SliceRandom;
 use rand::Rng;
-use statrs::distribution::{Continuous, Univariate};
+use statrs::distribution::{Continuous, ContinuousCDF};
 
 /// Builder of [`ParzenEstimator`].
 #[derive(Debug, Default)]
