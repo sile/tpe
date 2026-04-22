@@ -1,6 +1,6 @@
 [package]
 name = "tpe"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Takeru Ohta <phjgt308@gmail.com>"]
 edition = "2024"
 rust-version = "1.88"
