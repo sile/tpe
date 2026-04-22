@@ -1,7 +1,7 @@
 //! Probability density function estimation.
 use crate::Range;
 use rand::Rng;
-use rand::distributions::Distribution;
+use rand::distr::Distribution;
 
 pub use self::histogram::{HistogramEstimator, HistogramEstimatorBuilder};
 pub use self::parzen::{ParzenEstimator, ParzenEstimatorBuilder};

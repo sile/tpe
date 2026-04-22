@@ -1,8 +1,8 @@
 use crate::Range;
 use crate::density_estimation::{BuildDensityEstimator, DensityEstimator};
-use rand::Rng;
-use rand::distributions::Distribution;
-use rand::seq::SliceRandom;
+use rand::distr::Distribution;
+use rand::seq::IndexedRandom;
+use rand::{Rng, RngExt};
 use statrs::distribution::{Continuous, ContinuousCDF};
 
 /// Builder of [`ParzenEstimator`].
@@ -133,9 +133,10 @@ fn logsumexp(xs: &[f64]) -> f64 {
 impl Distribution<f64> for ParzenEstimator {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> f64 {
         while let Some(x) = self.samples.choose(rng) {
-            let draw = rand_distr::Normal::new(x.mean, x.stddev)
+            let u: f64 = rng.random();
+            let draw = statrs::distribution::Normal::new(x.mean, x.stddev)
                 .expect("unreachable")
-                .sample(rng);
+                .inverse_cdf(u);
             if self.range.contains(draw) {
                 return draw;
             }

@@ -12,12 +12,9 @@ categories = ["science"]
 license = "MIT"
 
 [dependencies]
-rand = "0.8"
-rand_distr = "0.4"
+rand = "0.10"
 statrs = "0.18.0"
 
 [dev-dependencies]
-anyhow = "1"
-kurobako_core = "0.1"
-serde_json = "1"
+nojson = "0.3"
 tempfile = "3"

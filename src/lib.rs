@@ -6,7 +6,7 @@
 //! ```
 //! use rand::SeedableRng as _;
 //!
-//! # fn main() -> anyhow::Result<()> {
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let choices = [1, 10, 100];
 //! let mut optim0 =
 //!     tpe::TpeOptimizer::new(tpe::parzen_estimator(), tpe::range(-5.0, 5.0)?);
@@ -29,7 +29,7 @@
 //!    best_value = best_value.min(v);
 //! }
 //!
-//! assert_eq!(best_value, 1.000054276671888);
+//! assert_eq!(best_value, 1.000001797034529);
 //! # Ok(())
 //! # }
 //! ```
@@ -46,7 +46,7 @@ use crate::density_estimation::{BuildDensityEstimator, DefaultEstimatorBuilder, 
 use crate::density_estimation::{HistogramEstimator, ParzenEstimator};
 use crate::range::{Range, RangeError};
 use rand::Rng;
-use rand::distributions::Distribution;
+use rand::distr::Distribution;
 use std::num::NonZeroUsize;
 
 pub mod density_estimation;
@@ -232,9 +232,11 @@ impl<T: BuildDensityEstimator> TpeOptimizer<T> {
     /// You can this method to store and load the state of a [`TpeOptimizer`].
     ///
     /// ```
-    /// # fn main() -> anyhow::Result<()> {
+    /// use std::io::Write as _;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let temp_file = tempfile::NamedTempFile::new()?;
-    /// let mut rng = rand::thread_rng();
+    /// let mut rng = rand::rng();
     ///
     /// fn objective(x: f64) -> f64 {
     ///     x.powi(2)
@@ -252,10 +254,11 @@ impl<T: BuildDensityEstimator> TpeOptimizer<T> {
     ///     }
     ///
     ///     // Stores the trials.
+    ///     let trials: Vec<[f64; 2]> = optim.trials().map(|(p, v)| [p, v]).collect();
     ///     let mut file = std::fs::OpenOptions::new()
     ///         .write(true)
     ///         .open(temp_file.path())?;
-    ///     serde_json::to_writer(&mut file, &optim.trials().collect::<Vec<_>>())?;
+    ///     write!(file, "{}", nojson::Json(&trials))?;
     /// }
     ///
     /// {
@@ -263,9 +266,9 @@ impl<T: BuildDensityEstimator> TpeOptimizer<T> {
     ///         tpe::TpeOptimizer::new(tpe::parzen_estimator(), tpe::range(-5.0, 5.0)?);
     ///
     ///     // Loads the previous trials.
-    ///     let mut file = std::fs::File::open(temp_file.path())?;
-    ///     let trials: Vec<(f64, f64)> = serde_json::from_reader(&mut file)?;
-    ///     for (x, v) in trials {
+    ///     let text = std::fs::read_to_string(temp_file.path())?;
+    ///     let trials: nojson::Json<Vec<[f64; 2]>> = text.parse()?;
+    ///     for [x, v] in trials.0 {
     ///         optim.tell(x, v)?;
     ///     }
     ///
@@ -362,8 +365,10 @@ mod tests {
     use super::*;
     use rand::SeedableRng;
 
+    type TestResult = Result<(), Box<dyn std::error::Error>>;
+
     #[test]
-    fn optimizer_works() -> anyhow::Result<()> {
+    fn optimizer_works() -> TestResult {
         let choices = [1, 10, 100];
         let mut optim0 = TpeOptimizer::new(parzen_estimator(), range(-5.0, 5.0)?);
         let mut optim1 =
@@ -373,7 +378,7 @@ mod tests {
             x.powi(2) + y as f64
         }
 
-        let mut best_value = std::f64::INFINITY;
+        let mut best_value = f64::INFINITY;
         let mut rng = rand::rngs::StdRng::from_seed(Default::default());
         for _ in 0..100 {
             let x = optim0.ask(&mut rng)?;
@@ -384,15 +389,17 @@ mod tests {
             optim1.tell(y, v)?;
             best_value = best_value.min(v);
         }
-        assert_eq!(best_value, 1.000054276671888);
+        assert_eq!(best_value, 1.000001797034529);
 
         Ok(())
     }
 
     #[test]
-    fn store_and_save_trials_worls() -> anyhow::Result<()> {
+    fn store_and_load_trials_works() -> TestResult {
+        use std::io::Write as _;
+
         let temp_file = tempfile::NamedTempFile::new()?;
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
 
         fn objective(x: f64) -> f64 {
             x.powi(2)
@@ -409,19 +416,20 @@ mod tests {
             }
 
             // Stores the trials.
+            let trials: Vec<[f64; 2]> = optim.trials().map(|(p, v)| [p, v]).collect();
             let mut file = std::fs::OpenOptions::new()
                 .write(true)
                 .open(temp_file.path())?;
-            serde_json::to_writer(&mut file, &optim.trials().collect::<Vec<_>>())?;
+            write!(file, "{}", nojson::Json(&trials))?;
         }
 
         {
             let mut optim = TpeOptimizer::new(parzen_estimator(), range(-5.0, 5.0)?);
 
             // Loads the previous trials.
-            let mut file = std::fs::File::open(temp_file.path())?;
-            let trials: Vec<(f64, f64)> = serde_json::from_reader(&mut file)?;
-            for (x, v) in trials {
+            let text = std::fs::read_to_string(temp_file.path())?;
+            let trials: nojson::Json<Vec<[f64; 2]>> = text.parse()?;
+            for [x, v] in trials.0 {
                 optim.tell(x, v)?;
             }
 
