@@ -58,7 +58,7 @@ pub struct HistogramEstimator {
 
 impl DensityEstimator for HistogramEstimator {
     fn log_pdf(&self, x: f64) -> f64 {
-        self.probabilities[x.floor() as usize]
+        self.probabilities[x.floor() as usize].ln()
     }
 }
 
