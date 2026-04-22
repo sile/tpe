@@ -40,7 +40,7 @@ for _ in 0..100 {
    best_value = best_value.min(v);
 }
 
-assert_eq!(best_value, 1.0000498046875759);
+assert_eq!(best_value, 1.0001089491396404);
 ```
 
 
