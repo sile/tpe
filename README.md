@@ -28,7 +28,7 @@ fn objective(x: f64, y: i32) -> f64 {
     x.powi(2) + y as f64
 }
 
-let mut best_value = std::f64::INFINITY;
+let mut best_value = f64::INFINITY;
 let mut rng = rand::rngs::StdRng::from_seed(Default::default());
 for _ in 0..100 {
    let x = optim0.ask(&mut rng)?;
@@ -40,24 +40,8 @@ for _ in 0..100 {
    best_value = best_value.min(v);
 }
 
-assert_eq!(best_value, 1.000098470725203);
+assert_eq!(best_value, 1.0000498046875759);
 ```
-
-### [`kurobako`] benchmark
-
-There is an example [examples/tpe-solver.rs](examples/tpe-solver.rs) which implements
-the [`kurobako`] solver interface, so you can run a benchmark using TPE as follows:
-
-```console
-$ PROBLEMS=$(kurobako problem-suite sigopt auc)
-$ SOLVERS="$(kurobako solver command -- cargo run --release --example tpe-solver) $(kurobako solver optuna)"
-$ kurobako studies --solvers $SOLVERS --problems $PROBLEMS --repeats 30 --budget 80 | kurobako run > result.json
-$ cat result.json | kurobako report > report.md
-```
-
-The result (`report.md`) of the above commands is shown [here](https://gist.github.com/sile/f720168c85810757524e17c94978792a).
-
-[`kurobako`]: https://github.com/optuna/kurobako
 
 
 References

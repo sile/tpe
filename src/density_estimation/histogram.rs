@@ -1,7 +1,8 @@
 use crate::Range;
 use crate::density_estimation::{BuildDensityEstimator, DensityEstimator};
 use rand::Rng;
-use rand::distributions::{Distribution, WeightedIndex};
+use rand::distr::Distribution;
+use rand::distr::weighted::WeightedIndex;
 
 /// Builder of [`HistogramEstimator`].
 #[derive(Debug, Default)]

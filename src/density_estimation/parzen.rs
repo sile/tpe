@@ -1,9 +1,8 @@
 use crate::Range;
 use crate::density_estimation::{BuildDensityEstimator, DensityEstimator};
-use rand::Rng;
-use rand::distributions::Distribution;
-use rand::seq::SliceRandom;
-use statrs::distribution::{Continuous, ContinuousCDF};
+use rand::distr::{Distribution, OpenClosed01};
+use rand::seq::IndexedRandom;
+use rand::{Rng, RngExt};
 
 /// Builder of [`ParzenEstimator`].
 #[derive(Debug, Default)]
@@ -88,16 +87,29 @@ struct Normal {
 
 impl Normal {
     fn log_pdf(&self, x: f64) -> f64 {
-        statrs::distribution::Normal::new(self.mean, self.stddev)
-            .expect("unreachable")
-            .ln_pdf(x)
+        let z = (x - self.mean) / self.stddev;
+        -0.5 * z * z - 0.5 * (2.0 * std::f64::consts::PI).ln() - self.stddev.ln()
     }
 
     fn cdf(&self, x: f64) -> f64 {
-        statrs::distribution::Normal::new(self.mean, self.stddev)
-            .expect("unreachable")
-            .cdf(x)
+        0.5 * (1.0 + erf((x - self.mean) / (self.stddev * std::f64::consts::SQRT_2)))
     }
+}
+
+// Error function approximation by Abramowitz & Stegun 7.1.26 (max error ~1.5e-7).
+fn erf(x: f64) -> f64 {
+    const A1: f64 = 0.254829592;
+    const A2: f64 = -0.284496736;
+    const A3: f64 = 1.421413741;
+    const A4: f64 = -1.453152027;
+    const A5: f64 = 1.061405429;
+    const P: f64 = 0.3275911;
+
+    let sign = if x < 0.0 { -1.0 } else { 1.0 };
+    let x = x.abs();
+    let t = 1.0 / (1.0 + P * x);
+    let y = 1.0 - ((((A5 * t + A4) * t + A3) * t + A2) * t + A1) * t * (-x * x).exp();
+    sign * y
 }
 
 /// Parzen window based density estimator.
@@ -133,9 +145,12 @@ fn logsumexp(xs: &[f64]) -> f64 {
 impl Distribution<f64> for ParzenEstimator {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> f64 {
         while let Some(x) = self.samples.choose(rng) {
-            let draw = rand_distr::Normal::new(x.mean, x.stddev)
-                .expect("unreachable")
-                .sample(rng);
+            // Box-Muller transform: convert two uniform samples into a standard normal sample.
+            // `OpenClosed01` excludes 0 so that `ln(u1)` is finite.
+            let u1: f64 = rng.sample(OpenClosed01);
+            let u2: f64 = rng.random();
+            let z = (-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos();
+            let draw = x.mean + x.stddev * z;
             if self.range.contains(draw) {
                 return draw;
             }
