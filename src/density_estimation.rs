@@ -35,9 +35,10 @@ pub trait BuildDensityEstimator {
 
 /// Default estimator.
 #[derive(Debug)]
-#[allow(missing_docs)]
 pub enum DefaultEstimator {
+    /// [`ParzenEstimator`] for numerical parameters.
     Parzen(ParzenEstimator),
+    /// [`HistogramEstimator`] for categorical parameters.
     Histogram(HistogramEstimator),
 }
 
@@ -61,9 +62,10 @@ impl Distribution<f64> for DefaultEstimator {
 
 /// Builder of [`DefaultEstimator`].
 #[derive(Debug)]
-#[allow(missing_docs)]
 pub enum DefaultEstimatorBuilder {
+    /// Builder of [`ParzenEstimator`] for numerical parameters.
     Parzen(ParzenEstimatorBuilder),
+    /// Builder of [`HistogramEstimator`] for categorical parameters.
     Histogram(HistogramEstimatorBuilder),
 }
 

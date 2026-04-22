@@ -2,7 +2,7 @@
 //!
 //! # Examples
 //!
-//! An example optimizing a simple quadratic function which has one numerical and one categorical parameters.
+//! An example optimizing a simple quadratic function which has one numerical and one categorical parameter.
 //! ```
 //! use rand::SeedableRng as _;
 //!
@@ -17,7 +17,7 @@
 //!     x.powi(2) + y as f64
 //! }
 //!
-//! let mut best_value = std::f64::INFINITY;
+//! let mut best_value = f64::INFINITY;
 //! let mut rng = rand::rngs::StdRng::from_seed(Default::default());
 //! for _ in 0..100 {
 //!    let x = optim0.ask(&mut rng)?;
@@ -64,12 +64,12 @@ pub fn categorical_range(cardinality: usize) -> Result<Range, RangeError> {
     Range::new(0.0, cardinality as f64)
 }
 
-/// Creates a [`DefaultEstimatorBuilder`] to build [`ParzenEstimator`] (for categorical parameter).
+/// Creates a [`DefaultEstimatorBuilder`] to build [`ParzenEstimator`] (for numerical parameter).
 pub fn parzen_estimator() -> DefaultEstimatorBuilder {
     DefaultEstimatorBuilder::Parzen(Default::default())
 }
 
-/// Creates a [`DefaultEstimatorBuilder`] to build [`HistogramEstimator`] (for numerical parameter).
+/// Creates a [`DefaultEstimatorBuilder`] to build [`HistogramEstimator`] (for categorical parameter).
 pub fn histogram_estimator() -> DefaultEstimatorBuilder {
     DefaultEstimatorBuilder::Histogram(Default::default())
 }
@@ -138,7 +138,7 @@ impl Default for TpeOptimizerBuilder {
 
 /// Optimizer using TPE.
 ///
-/// This try to search out the parameter value which could minimize the evaluation result.
+/// This tries to search out the parameter value which could minimize the evaluation result.
 ///
 /// Note that an instance of TpeOptimizer can handle only one hyperparameter.
 /// So if you want to optimize multiple hyperparameters simultaneously,
@@ -204,7 +204,7 @@ impl<T: BuildDensityEstimator> TpeOptimizer<T> {
     /// Tells the evaluation result of a hyperparameter value to the optimizer.
     ///
     /// Note that the `param` should be NaN if the hyperparameter was not used in the evaluation
-    /// (this could be happen when the entire search space is conditional).
+    /// (this could happen when the entire search space is conditional).
     pub fn tell(&mut self, param: f64, value: f64) -> Result<(), TellError> {
         if value.is_nan() {
             return Err(TellError::NanValue);
@@ -223,13 +223,13 @@ impl<T: BuildDensityEstimator> TpeOptimizer<T> {
         Ok(())
     }
 
-    /// Retruns all told parameter and objective values.
+    /// Returns all told parameter and objective values.
     ///
     /// Note that the order of items in the returned iterator doesn't reflect the order [`TpeOptimizer::tell`] called.
     ///
     /// # Examples
     ///
-    /// You can this method to store and load the state of a [`TpeOptimizer`].
+    /// You can use this method to store and load the state of a [`TpeOptimizer`].
     ///
     /// ```
     /// use std::io::Write as _;

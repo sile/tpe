@@ -1,6 +1,6 @@
 //! Parameter range.
 
-/// Range which has represents (inclusive) and end (exclusive) as floating values.
+/// Range with a start (inclusive) and end (exclusive) as floating-point values.
 #[derive(Debug, Clone, Copy)]
 pub struct Range {
     start: f64,

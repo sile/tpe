@@ -14,7 +14,7 @@ Examples
 
 ### Minimize the result of a quadratic function
 
-An example optimizing a simple quadratic function which has one numerical and one categorical parameters.
+An example optimizing a simple quadratic function which has one numerical and one categorical parameter.
 ```rust
 use rand::SeedableRng as _;
 
