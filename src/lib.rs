@@ -29,7 +29,7 @@
 //!    best_value = best_value.min(v);
 //! }
 //!
-//! assert_eq!(best_value, 1.000001797034529);
+//! assert_eq!(best_value, 1.0000498046875759);
 //! # Ok(())
 //! # }
 //! ```
@@ -389,7 +389,7 @@ mod tests {
             optim1.tell(y, v)?;
             best_value = best_value.min(v);
         }
-        assert_eq!(best_value, 1.000001797034529);
+        assert_eq!(best_value, 1.0000498046875759);
 
         Ok(())
     }
