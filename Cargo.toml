@@ -2,7 +2,8 @@
 name = "tpe"
 version = "0.2.0"
 authors = ["Takeru Ohta <phjgt308@gmail.com>"]
-edition = "2021"
+edition = "2024"
+rust-version = "1.88"
 description = "A library that implements TPE, a hyperparameter optimization algorithm"
 homepage = "https://github.com/sile/tpe"
 repository = "https://github.com/sile/tpe"

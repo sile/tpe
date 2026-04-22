@@ -45,8 +45,8 @@ use crate::density_estimation::{BuildDensityEstimator, DefaultEstimatorBuilder, 
 #[cfg(doc)]
 use crate::density_estimation::{HistogramEstimator, ParzenEstimator};
 use crate::range::{Range, RangeError};
-use rand::distributions::Distribution;
 use rand::Rng;
+use rand::distributions::Distribution;
 use std::num::NonZeroUsize;
 
 pub mod density_estimation;

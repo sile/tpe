@@ -1,8 +1,8 @@
-use crate::density_estimation::{BuildDensityEstimator, DensityEstimator};
 use crate::Range;
+use crate::density_estimation::{BuildDensityEstimator, DensityEstimator};
+use rand::Rng;
 use rand::distributions::Distribution;
 use rand::seq::SliceRandom;
-use rand::Rng;
 use statrs::distribution::{Continuous, ContinuousCDF};
 
 /// Builder of [`ParzenEstimator`].
