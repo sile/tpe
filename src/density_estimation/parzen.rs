@@ -35,7 +35,8 @@ impl ParzenEstimatorBuilder {
         let max_stddev = range.width();
         let min_stddev = range.width() / 100f64.min(1.0 + n as f64);
         for x in xs {
-            x.stddev = x.stddev.max(min_stddev).min(max_stddev);
+            let stddev = x.stddev.max(min_stddev).min(max_stddev);
+            x.set_stddev(stddev);
         }
     }
 }
@@ -55,10 +56,7 @@ impl BuildDensityEstimator for ParzenEstimatorBuilder {
         let prior = (range.start() + range.end()) * 0.5;
         let mut xs = xs
             .chain(std::iter::once(prior))
-            .map(|x| Normal {
-                mean: x,
-                stddev: f64::NAN,
-            })
+            .map(Normal::new)
             .collect::<Vec<_>>();
         xs.sort_by(|x, y| x.mean.total_cmp(&y.mean));
 
@@ -70,10 +68,13 @@ impl BuildDensityEstimator for ParzenEstimatorBuilder {
             .sum::<f64>()
             / xs.len() as f64;
 
+        // log(1 / (n * p_accept)), added to each log_pdf result.
+        let log_offset = -(xs.len() as f64).ln() - p_accept.ln();
+
         Ok(ParzenEstimator {
             samples: xs,
             range,
-            p_accept,
+            log_offset,
         })
     }
 }
@@ -83,16 +84,34 @@ impl BuildDensityEstimator for ParzenEstimatorBuilder {
 struct Normal {
     mean: f64,
     stddev: f64,
+    stddev_inv: f64,
+    log_norm_const: f64,
 }
 
 impl Normal {
+    fn new(mean: f64) -> Self {
+        Self {
+            mean,
+            stddev: f64::NAN,
+            stddev_inv: f64::NAN,
+            log_norm_const: f64::NAN,
+        }
+    }
+
+    fn set_stddev(&mut self, stddev: f64) {
+        self.stddev = stddev;
+        self.stddev_inv = 1.0 / stddev;
+        self.log_norm_const = -0.5 * (2.0 * std::f64::consts::PI).ln() - stddev.ln();
+    }
+
+    #[inline]
     fn log_pdf(&self, x: f64) -> f64 {
-        let z = (x - self.mean) / self.stddev;
-        -0.5 * z * z - 0.5 * (2.0 * std::f64::consts::PI).ln() - self.stddev.ln()
+        let z = (x - self.mean) * self.stddev_inv;
+        -0.5 * z * z + self.log_norm_const
     }
 
     fn cdf(&self, x: f64) -> f64 {
-        0.5 * (1.0 + erf((x - self.mean) / (self.stddev * std::f64::consts::SQRT_2)))
+        0.5 * (1.0 + erf((x - self.mean) * self.stddev_inv / std::f64::consts::SQRT_2))
     }
 }
 
@@ -119,27 +138,30 @@ fn erf(x: f64) -> f64 {
 pub struct ParzenEstimator {
     samples: Vec<Normal>,
     range: Range,
-    p_accept: f64,
+    log_offset: f64,
 }
 
 impl DensityEstimator for ParzenEstimator {
     fn log_pdf(&self, x: f64) -> f64 {
-        let weight = 1.0 / self.samples.len() as f64;
-        let xs = self
-            .samples
-            .iter()
-            .map(|sample| sample.log_pdf(x) + (weight / self.p_accept).ln())
-            .collect::<Vec<_>>();
-        logsumexp(&xs)
+        // Streaming `logsumexp` over `Normal::log_pdf` values, skipping the
+        // intermediate `Vec` allocation the non-streaming form would require.
+        let mut samples = self.samples.iter();
+        let first = samples
+            .next()
+            .expect("ParzenEstimator always has at least one sample");
+        let mut max_lp = first.log_pdf(x);
+        let mut sum_exp = 1.0;
+        for sample in samples {
+            let lp = sample.log_pdf(x);
+            if lp > max_lp {
+                sum_exp = sum_exp * (max_lp - lp).exp() + 1.0;
+                max_lp = lp;
+            } else {
+                sum_exp += (lp - max_lp).exp();
+            }
+        }
+        max_lp + sum_exp.ln() + self.log_offset
     }
-}
-
-fn logsumexp(xs: &[f64]) -> f64 {
-    let max_x = xs
-        .iter()
-        .max_by(|x, y| x.total_cmp(y))
-        .expect("unreachable");
-    xs.iter().map(|&x| (x - max_x).exp()).sum::<f64>().ln() + max_x
 }
 
 impl Distribution<f64> for ParzenEstimator {
